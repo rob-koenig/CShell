@@ -5,3 +5,5 @@ fork.c, exec.c : examples of using fork and exec (resp).
 get_path* : how to find executables using the $PATH variable
 
 main.c, sh.c : starter framework for your shell
+
+mysh_ref : working version of the shell program
