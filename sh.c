@@ -66,11 +66,6 @@ char *which(char *command, struct pathelement *pathlist )
 
 } /* which() */
 
-char *where(char *command, struct pathelement *pathlist )
-{
-  /* similarly loop through finding all locations of command */
-} /* where() */
-
 void list ( char *dir )
 {
   /* see man page for opendir() and readdir() and print out filenames for
