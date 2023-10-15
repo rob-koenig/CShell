@@ -7,3 +7,5 @@ get_path* : how to find executables using the $PATH variable
 main.c, sh.c : starter framework for your shell
 
 mysh_ref : working version of the shell program
+
+fibstart.sh, fib.sh : scripts to compute Fibonacci sequence in mysh
