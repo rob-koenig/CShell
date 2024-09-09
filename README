@@ -6,6 +6,9 @@ get_path* : how to find executables using the $PATH variable
 
 main.c, sh.c : starter framework for your shell
 
-mysh_ref : working version of the shell program
+desh_ref : working version of the shell program
+
+builtin.c : example of a very simple shell with a single built-in command
 
 fibstart.sh, fib.sh : scripts to compute Fibonacci sequence in mysh
+(only needed for the "advanced shell" assignment later in the semester)
