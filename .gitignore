@@ -1,0 +1,4 @@
+builtin
+exec
+fork
+*.o

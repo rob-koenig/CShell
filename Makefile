@@ -15,4 +15,4 @@ get_path.o: get_path.c get_path.h
 	$(CC) -g -c get_path.c
 
 clean:
-	rm -rf *.o *.o mysh fork exec
+	rm -rf *.o *.o desh fork exec

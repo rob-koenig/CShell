@@ -7,7 +7,7 @@ int main(void)
 
   char *argv[] = { "/bin/ls", "*.c", 0 };
 
-  // char *argv[] = { "/bin/ls", "11", "a.out", "exec", "mysh", 0 };
+  // char *argv[] = { "/bin/ls", "11", "a.out", "exec", "desh", 0 };
 
   execve(argv[0], &argv[0], NULL);
 
