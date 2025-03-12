@@ -2,6 +2,10 @@
 #include <signal.h>
 #include <stdio.h>
 
+void sig_handler(int signal){
+  
+} 
+
 int main( int argc, char **argv, char **envp )
 {
   struct sigaction sa;
@@ -15,5 +19,3 @@ int main( int argc, char **argv, char **envp )
 
   return sh(argc, argv, envp);
 }
-
-void sig_handler(int signal); 
