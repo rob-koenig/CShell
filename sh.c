@@ -42,20 +42,7 @@ int sh( int argc, char **argv, char **envp )
   while ( go )
   {
     /* print your prompt */
-
-    /* get command line and process */
-
-    /* check for each built in command and implement */
-
-     /*  else  program to exec */
-    //{
-       /* find it */
-       /* do fork(), execve() and waitpid() */
-
-      /* else */
-        /* fprintf(stderr, "%s: Command not found.\n", args[0]); */
-    //}
-    printf(" %s[%s]> ", prompt, pwd);
+    printf(" %s [%s]> ", prompt, pwd);
     
     /* get command line and process */
     if (fgets(commandline, MAX_CANON, stdin) == NULL) {
@@ -63,70 +50,60 @@ int sh( int argc, char **argv, char **envp )
       continue;
     }
   
-    /* Remove newline character if present */
-    if (commandline[strlen(commandline) - 1] == '\n')
-        commandline[strlen(commandline) - 1] = '\0';
+    /* remove newline character if present */
+    if (commandline[strlen(commandline) - 1] == '\n') {
+      commandline[strlen(commandline) - 1] = '\0';
+    }
 
-    /* If nothing was entered, continue */
-    if (strlen(commandline) == 0)
-      continue;
-
-    /* Parse the command line */
+    /* parse the command line */
     command = strtok(commandline, " ");
-    if (command == NULL)
+    if (command == NULL){
       continue;
+    }
 
-    /* Copy command into args[0] */
+    /* copy command into args[0] */
     args[0] = command;
 
-    /* Parse arguments */
+    /* parse arguments */
     argsct = 1;
     while ((arg = strtok(NULL, " ")) != NULL && argsct < MAXARGS) {
       args[argsct++] = arg;
     }
-    args[argsct] = NULL; /* Null-terminate the argument list */
+    args[argsct] = NULL; // null terminate the argument list
 
     cmd_print(args, argsct); 
 
     /* check for each built in command and implement */
     if (strcmp(args[0], "exit") == 0) {
-      if (args[1] == NULL) {
+      if (args[1] == NULL) { // exits
         go = 0;
-      } else {
+      } else { // exits with specified code
         exit(atoi(args[1]));
       }
     } else if (strcmp(args[0], "which") == 0) {
       commandpath = which(args[1], pathlist);
       printf("%s\n", commandpath);
     } else if (strcmp(args[0], "list") == 0) {
-      /* Handle the list command */
-      if (args[1] == NULL) {
-        /* If no directory specified, list the current directory */
+      if (args[1] == NULL) { // list current directory
         list(pwd);
-      } else {
-        /* List the specified directory */
+      } else { // list specified directory
         list(args[1]);
       }
     } else if (strcmp(args[0], "pwd") == 0) {
-      /* Print working directory */
       printf("%s\n", pwd);
     } else if (strcmp(args[0], "cd") == 0) {
-      /* Change directory command */
-      if (args[1] == NULL) {
-        // cd with no arguments goes to home directory 
-        if (chdir(homedir) != 0) {
+      if (args[1] == NULL) { // no arguments goes to home directory 
+        if (chdir(homedir) != 0) { 
           perror("cd to home failed");
-        } else {
-          // Update current and old working directories 
+        } else { // update current and old working directories 
           free(owd);
           owd = pwd;
           pwd = getcwd(NULL, PATH_MAX+1);
         }
-      } else {
+      } else { // goes to specified directory
         if (chdir(args[1]) != 0) {
           perror("cd failed");
-        } else {
-          // Update current and old working directories 
+        } else { // update current and old working directories 
           free(owd);
           owd = pwd;
           pwd = getcwd(NULL, PATH_MAX+1);
@@ -136,39 +113,88 @@ int sh( int argc, char **argv, char **envp )
       pid_t pid = getpid();
       printf("%d\n", pid);
     } else if (strcmp(args[0], "prompt") == 0) {
-      if (args[1] == NULL){
-        continue;
-      } else {
+      if (args[1] == NULL){ // no arguments prompts user for input
+        printf("Enter new prompt prefix: ");
+        if (fgets(prompt, PROMPTMAX, stdin) != NULL) { // uses user input
+          int len = strlen(prompt);
+          prompt[len - 1] = '\0';
+        } else { // resets to blank
+          prompt[0] = ' '; 
+          prompt[1] = '\0';
+        }
+      } else { // uses argument in command 
         prompt = args[1];
-        int temp = strlen(prompt);
-        prompt[temp + 1] = '\n';
       }
-      
     } else if (strcmp(args[0], "printevn") == 0) {
-
+      if (args[1] == NULL) { // no arguments prints whole enviorment
+        printenv(envp);
+      } else { // prints value of specified enviormental variable 
+        for (int i = 1; i < argsct; i++) {
+          char *value = getenv(args[i]);
+          if (value) { // variable found
+            printf("%s=%s\n", args[i], value);
+          } else { // variable not found
+            printf("No variable: %s\n", args[i]);
+          }
+        }
+      }
     } else if (strcmp(args[0], "setevn") == 0) {
-      
-    } else { // Add more built-in commands as needed 
+      if (argsct == 1) { // no arguments print the whole environment
+      printenv(envp);
+      } else if (argsct == 2) { // 1 argument sets empty variable
+        if (setenv(args[1], "", 1) != 0) { // sets and returns non zero when error
+          perror("setenv failed");
+        } else { // set successful 
+          printf("Set %s=%s\n", args[1], "");
+          if (strcmp(args[1], "PATH") == 0) { // update pathlist as nececary
+            pathlist = get_path();
+          }
+          if (strcmp(args[1], "HOME") == 0) { // update home directory as nececary
+            homedir = getenv("HOME");
+          }
+        }
+      } else if (argsct == 3) { // 2 arguments sets variable
+        if (setenv(args[1], args[2], 1) != 0) { // sets and returns non zero when error
+          perror("setenv failed");
+        } else {  // set successful 
+          printf("Set %s=%s\n", args[1], args[2]);
+          if (strcmp(args[1], "PATH") == 0) { // update pathlist as nececary
+            pathlist = get_path();
+          }
+          if (strcmp(args[1], "HOME") == 0) { // update home directory as nececary
+            homedir = getenv("HOME");
+          }
+        }
+      } else { // More than 2 args
+        perror("Too many arguments");
+      }
+    } else {
       /* program to exec */
       commandpath = which(args[0], pathlist);
+      /* find it */
       if (commandpath != NULL) {
-          /* do fork(), execve() and waitpid() */
-          pid_t pid = fork();
-          if (pid == 0) {
-              /* Child process */
-              execve(commandpath, args, envp);
-              /* If execve returns, there was an error */
-              perror("execve failed");
-          } else if (pid > 0) {
-              /* Parent process */
-              waitpid(pid, &status, 0);
-          } else {
-              /* Error forking */
-              perror("fork failed");
-          }
-          free(commandpath);
-      } else {
-          fprintf(stderr, "%s: Command not found.\n", args[0]);
+        /* do fork(), execve() and waitpid() */
+        pid_t pid = fork();
+        if (pid == 0) { // child
+          struct sigaction default_sa;
+          default_sa.sa_handler = SIG_DFL;  // restore default behavior
+          sigemptyset(&default_sa.sa_mask);
+          default_sa.sa_flags = 0;
+    
+          sigaction(SIGINT, &default_sa, NULL);
+          sigaction(SIGTSTP, &default_sa, NULL);
+          sigaction(SIGTERM, &default_sa, NULL);
+
+          execve(commandpath, args, envp);
+          perror("execve failed");
+        } else if (pid > 0) { // parent
+          waitpid(pid, &status, 0);
+        } else { // error
+          perror("fork failed");
+        }
+        free(commandpath);
+      } else { // didnt find it :(
+        fprintf(stderr, "%s: Command not found.\n", args[0]);
       }
     }
   }
@@ -179,8 +205,8 @@ char *which(char *command, struct pathelement *pathlist )
 {
   /* loop through pathlist until finding command and return it.  Return
   NULL when not found. */
-  char *path = malloc(PATH_MAX); // Allocate memory for the full path
-  
+  char *path = malloc(PATH_MAX); // allocate memory for the full path
+
   while (pathlist) {
     sprintf(path, "%s/%s", pathlist->element, command);
     if (access(path, X_OK) == 0) {
@@ -189,9 +215,8 @@ char *which(char *command, struct pathelement *pathlist )
     pathlist = pathlist->next;
   }
    
-  free(path); // Free memory if command wasn't found
+  free(path); // free memory if command noy found
   return NULL;
-
 } /* which() */
 
 void list ( char *dir )
@@ -201,39 +226,43 @@ void list ( char *dir )
   DIR *dp;
   struct dirent *entry;
     
-  /* Open the directory */
-  if ((dp = opendir(dir)) == NULL) {
+  if ((dp = opendir(dir)) == NULL) { // opens directory and catches possible error
     perror("opendir");
     return;
   }
     
-  /* Read directory entries */
-  while ((entry = readdir(dp)) != NULL) {
+  while ((entry = readdir(dp)) != NULL) { // prints directory entries
     printf("%s\n", entry->d_name);
   }
     
-  /* Close the directory */
-  closedir(dp);
+  closedir(dp); // closes directory 
 } /* list() */
 
 void cmd_print(char **args, int argsct) {
-  const char *builtins[] = {"exit", "which", "list", "pwd", "cd", "pid", "prompt", "printenv", "setenv"};
+  const char *builtins[] = {"exit", "which", "list", "pwd", "cd", "pid", "prompt", "printenv", "setenv"}; // list of builtins 
   int temp = 0;  
 
-  for (int i = 0; i < 9; i++) {
+  for (int i = 0; i < 9; i++) { // sees if input command it builtin
     if (strcmp(args[0], builtins[i]) == 0) {
       temp = 1;
     }
   }
 
-  if (temp) {
+  if (temp) { // message if builtin
     printf("Executing built-in command: %s", args[0]);
-  } else {
+  } else { // message if not builtin
     printf("Executing command: %s", args[0]);
   }
 
-  for (int i = 1; i < argsct; i++) {
+  for (int i = 1; i < argsct; i++) { // prints all other arguments and next line
     printf(" %s", args[i]);
   }
   printf("\n");
 }
+
+void printenv(char **envp) {
+  for (char **env = envp; *env != NULL; env++) {
+    printf("%s\n", *env);
+  }
+}
+

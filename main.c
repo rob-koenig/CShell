@@ -2,19 +2,18 @@
 #include <signal.h>
 #include <stdio.h>
 
-void sig_handler(int signal); 
-
 int main( int argc, char **argv, char **envp )
 {
-  /* put signal set up stuff here */
-  signal(SIGTERM, sig_handler);  // Handle SIGTERM
-  signal(SIGINT, sig_handler);
+  struct sigaction sa;
+  sa.sa_handler = sig_handler;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = SA_RESTART;  // Restart system calls (like fgets) instead of interrupting
+
+  sigaction(SIGINT, &sa, NULL);
+  sigaction(SIGTERM, &sa, NULL);
+  sigaction(SIGTSTP, &sa, NULL);  // Ignore Ctrl-Z
 
   return sh(argc, argv, envp);
 }
 
-void sig_handler(int signal)
-{
-  /* define your signal handler */
-}
-
+void sig_handler(int signal); 
