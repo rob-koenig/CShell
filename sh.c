@@ -11,6 +11,13 @@
 #include <signal.h>
 #include "sh.h"
 
+/**
+ * sh() function:
+ * input: 1 int (argc), 2 char** (argv, envp)
+ * output: 1 int (return status)
+ * description: main implimentation of the shell
+ * special: this function allocates memory
+ */
 int sh( int argc, char **argv, char **envp )
 {
   char *prompt = calloc(PROMPTMAX, sizeof(char));
@@ -19,7 +26,7 @@ int sh( int argc, char **argv, char **envp )
   char **args = calloc(MAXARGS, sizeof(char*));
   int uid, i, status, argsct, go = 1;
   struct passwd *password_entry;
-  char *homedir;
+  char *homedir, *projdir;
   struct pathelement *pathlist;
 
   uid = getuid();
@@ -31,6 +38,8 @@ int sh( int argc, char **argv, char **envp )
     perror("getcwd");
     exit(2);
   }
+  projdir = calloc(strlen(pwd) + 1, sizeof(char)); 
+  memcpy(projdir, pwd, strlen(pwd)); // saves project directory for later
   owd = calloc(strlen(pwd) + 1, sizeof(char));
   memcpy(owd, pwd, strlen(pwd));
   prompt[0] = ' '; 
@@ -46,8 +55,13 @@ int sh( int argc, char **argv, char **envp )
     
     /* get command line and process */
     if (fgets(commandline, MAX_CANON, stdin) == NULL) {
-      go = 0;
-      continue;
+      if (feof(stdin)) { // handle ctrl-d
+        clearerr(stdin);
+        printf("\n");
+        continue;
+      } else {
+        go = 0;
+      }
     }
   
     /* remove newline character if present */
@@ -76,34 +90,53 @@ int sh( int argc, char **argv, char **envp )
     /* check for each built in command and implement */
     if (strcmp(args[0], "exit") == 0) {
       if (args[1] == NULL) { // exits
+        printf("EC: 0\n");
         go = 0;
       } else { // exits with specified code
-        exit(atoi(args[1]));
+        printf("EC: %s\n", args[1]);
+        go = 0;
       }
     } else if (strcmp(args[0], "which") == 0) {
-      commandpath = which(args[1], pathlist);
-      printf("%s\n", commandpath);
+      if (args[1] == NULL) { // error if no specified command
+        perror("no specified command");
+      } else { // executes which function 
+        for (int i = 1; i < argsct; i++) {
+          commandpath = which(args[i], pathlist);
+          printf("%s\n", commandpath);
+          free(commandpath);
+        }
+      }
     } else if (strcmp(args[0], "list") == 0) {
       if (args[1] == NULL) { // list current directory
         list(pwd);
       } else { // list specified directory
-        list(args[1]);
+        for (int i = 1; i < argsct; i++) {
+          list(args[i]);
+        }
       }
     } else if (strcmp(args[0], "pwd") == 0) {
       printf("%s\n", pwd);
     } else if (strcmp(args[0], "cd") == 0) {
-      if (args[1] == NULL) { // no arguments goes to home directory 
-        if (chdir(homedir) != 0) { 
+      if (args[1] == NULL) { // go to home directory
+        if (chdir(homedir) != 0) {
           perror("cd to home failed");
-        } else { // update current and old working directories 
+        } else { // update current and old working directories
           free(owd);
           owd = pwd;
           pwd = getcwd(NULL, PATH_MAX+1);
         }
-      } else { // goes to specified directory
+      } else if (strcmp(args[1], "-") == 0) { // goes back to old working directory
+        if (chdir(projdir) != 0) {
+          perror("cd to project failed");
+        } else { // swap old and current working directories
+          free(owd);
+          owd = pwd;
+          pwd = getcwd(NULL, PATH_MAX+1);
+        }
+      } else { // go to the specified directory
         if (chdir(args[1]) != 0) {
           perror("cd failed");
-        } else { // update current and old working directories 
+        } else { // update current and old working directories
           free(owd);
           owd = pwd;
           pwd = getcwd(NULL, PATH_MAX+1);
@@ -125,7 +158,7 @@ int sh( int argc, char **argv, char **envp )
       } else { // uses argument in command 
         prompt = args[1];
       }
-    } else if (strcmp(args[0], "printevn") == 0) {
+    } else if (strcmp(args[0], "printenv") == 0) {
       if (args[1] == NULL) { // no arguments prints whole enviorment
         printenv(envp);
       } else { // prints value of specified enviormental variable 
@@ -138,7 +171,7 @@ int sh( int argc, char **argv, char **envp )
           }
         }
       }
-    } else if (strcmp(args[0], "setevn") == 0) {
+    } else if (strcmp(args[0], "setenv") == 0) {
       if (argsct == 1) { // no arguments print the whole environment
       printenv(envp);
       } else if (argsct == 2) { // 1 argument sets empty variable
@@ -176,15 +209,6 @@ int sh( int argc, char **argv, char **envp )
         /* do fork(), execve() and waitpid() */
         pid_t pid = fork();
         if (pid == 0) { // child
-          struct sigaction default_sa;
-          default_sa.sa_handler = SIG_DFL;  // restore default behavior
-          sigemptyset(&default_sa.sa_mask);
-          default_sa.sa_flags = 0;
-    
-          sigaction(SIGINT, &default_sa, NULL);
-          sigaction(SIGTSTP, &default_sa, NULL);
-          sigaction(SIGTERM, &default_sa, NULL);
-
           execve(commandpath, args, envp);
           perror("execve failed");
         } else if (pid > 0) { // parent
@@ -201,6 +225,13 @@ int sh( int argc, char **argv, char **envp )
   return 0;
 } /* sh() */
 
+/**
+ * *which() function:
+ * input: 1 char* (command), 1 pathelement* (pathlist)
+ * output: 1 char*
+ * description: finds and returns command in pathlist
+ * special: this function allocates memory
+ */
 char *which(char *command, struct pathelement *pathlist )
 {
   /* loop through pathlist until finding command and return it.  Return
@@ -219,6 +250,13 @@ char *which(char *command, struct pathelement *pathlist )
   return NULL;
 } /* which() */
 
+/**
+ * list() function:
+ * input: 1 char* (dir)
+ * output: none
+ * description: lists entries of given directory
+ * special: none
+ */
 void list ( char *dir )
 {
   /* see man page for opendir() and readdir() and print out filenames for
@@ -238,6 +276,13 @@ void list ( char *dir )
   closedir(dp); // closes directory 
 } /* list() */
 
+/**
+ * cmd_print() function:
+ * input: 1 int (argsct), 1 char** (args)
+ * output: none
+ * description: determines if command is builtin or not and prints commmand
+ * special: none
+ */
 void cmd_print(char **args, int argsct) {
   const char *builtins[] = {"exit", "which", "list", "pwd", "cd", "pid", "prompt", "printenv", "setenv"}; // list of builtins 
   int temp = 0;  
@@ -260,6 +305,13 @@ void cmd_print(char **args, int argsct) {
   printf("\n");
 }
 
+/**
+ * printenv() function:
+ * input: 1 char** (envp)
+ * output: none
+ * description: prints enviorment variables
+ * special: none
+ */
 void printenv(char **envp) {
   for (char **env = envp; *env != NULL; env++) {
     printf("%s\n", *env);
