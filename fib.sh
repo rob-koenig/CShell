@@ -4,7 +4,7 @@ setenv last0 $last1
 setenv last1 $ACC
 echo $counter entry is $ACC
 setenv ACC $counter
-addacc 
+addacc 1
 setenv counter $ACC
 test $counter -gt $end
 ?exit $last1
