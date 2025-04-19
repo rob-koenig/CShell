@@ -1,4 +1,4 @@
-Example code for the CISC361 Shell Project
+### Code for the CISC361 Shell Project
 
 fork.c, exec.c : examples of using fork and exec (resp).
 
